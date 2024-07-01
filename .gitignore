@@ -18,3 +18,6 @@ Pipfile.lock
 *.jpg
 docs/merfish_data/mouse_brain_map_BrainReceptorShowcase_Slice2_Replicate3_STalign_to_Visium_tissue_hires_image_with_point_annotator.csv.gz
 *.gz
+*.npz
+*.npy
+*.csv
