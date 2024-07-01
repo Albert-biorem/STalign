@@ -11,3 +11,8 @@ __pycache__/
 
 _build/
 Pipfile.lock
+*.gz
+*.gz
+*.png
+*.xcf
+*.jpg
