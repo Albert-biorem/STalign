@@ -21,3 +21,5 @@ docs/merfish_data/mouse_brain_map_BrainReceptorShowcase_Slice2_Replicate3_STalig
 *.npz
 *.npy
 *.csv
+*.raw
+*.mhd

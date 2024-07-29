@@ -49,32 +49,35 @@ Y_=np.arange(0, 1000, 1)
 # W=J[:,:,:]
 xI = [Y_,X_]
 # J = W[None]/np.mean(np.abs(W))
-vol,hdr = nrrd.read('../E13-5_MRI_34um/E13-5_LSFM_20um_masked_1.nrrd',index_order='F')
-A = vol.transpose(1,2,0) 
-slice = 170
-#theta_deg = 90
+vol,hdr = nrrd.read('../E13-5_MRI_34um/atlasVolume.nrrd',index_order='F')
+import SimpleITK as sitk
+itkimage = sitk.ReadImage("../atlasVolume/atlasVolume.mhd")
+ct_scan = sitk.GetArrayFromImage(itkimage)
+A = ct_scan.transpose(2,1,0) 
+slice = 251
+theta_deg = 0
 
-hdr['space directions']=-1*hdr['space directions']
-hdr['space directions'][1][1]=0.02
-hdr['space directions'][2][2]=0.02
-dxA = np.diag(hdr['space directions'])
-nxA = A.shape
-xA = [np.arange(n)*d - (n-1)*d/2.0 for n,d in zip(nxA,dxA)]
-XA = np.meshgrid(*xA,indexing='ij')
+# hdr['space directions']=-1*hdr['space directions']
+# hdr['space directions'][1][1]=0.02
+# hdr['space directions'][2][2]=0.02
+# dxA = np.diag(hdr['space directions'])
+# nxA = A.shape
+# xA = [np.arange(n)*d - (n-1)*d/2.0 for n,d in zip(nxA,dxA)]
+# XA = np.meshgrid(*xA,indexing='ij')
 
-# fig,ax = plt.subplots(1,2)
+fig,ax = plt.subplots()
 # extentA = STalign.extent_from_x(xA[1:])
-# ax[0].imshow(rotate(A[slice], angle=theta_deg),extent=extentA,interpolation='none')
-# ax[0].set_title('Atlas Slice')
+ax.imshow(rotate(A[slice], angle=theta_deg),interpolation='none')
+ax.set_title('Atlas Slice')
 
 # ax[1].imshow(W,extent=extentA,interpolation='none')
 # ax[1].set_title('Target Image')
 # #fig.savefig('_image.png', dpi = 1200)
 # #fig.show()
 # fig.canvas.draw()
-xJ = xA
-for i in range(len(xJ)):
-    xJ[i]=xJ[i]*100
+#xJ = xA
+#for i in range(len(xJ)):
+#    xJ[i]=xJ[i]*100
 J = (A[slice][None] / np.mean(np.abs(A[slice]),keepdims=True)).astype(np.float64)
 J=J[:,280:,:]
 # I = np.concatenate((I,(I-np.mean(I))**2))
@@ -83,7 +86,7 @@ YJ = (np.array(range(J.shape[1]))*1.).astype(np.float64) # needs to be longs not
 XJ = (np.array(range(J.shape[2]))*1.).astype(np.float64) # needs to be longs not doubles for STalign.transform later so multiply by 
 fig,ax = plt.subplots(1,2)
 extentJ = STalign.extent_from_x((YJ,XJ))
-extentA = STalign.extent_from_x(xA[1:])
+#extentA = STalign.extent_from_x(xA[1:])
 extentI = STalign.extent_from_x((YI,XI))
 theta_deg = -(90+30)
 ax[0].imshow((I.transpose(1,2,0).squeeze()), extent=extentI) 
@@ -114,7 +117,7 @@ pointsI = np.array(pointsI)
 pointsJ = np.array(pointsJ)
 fig,ax = plt.subplots(1,2)
 extentJ = STalign.extent_from_x((YJ,XJ))
-extentA = STalign.extent_from_x(xA[1:])
+#extentA = STalign.extent_from_x(xA[1:])
 extentI = STalign.extent_from_x((YI,XI))
 theta_deg = -(90+30)
 ax[0].imshow((I.transpose(1,2,0).squeeze()), extent=extentI) 
