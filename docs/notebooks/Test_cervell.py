@@ -11,13 +11,13 @@ import pandas as pd # for csv.
 from matplotlib import cm
 from matplotlib.lines import Line2D
 import os
-
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 from os.path import exists,split,join,splitext
 from os import makedirs
 import glob
 import requests
 from collections import defaultdict
-import nrrd
+#import nrrd
 import torch
 from torch.nn.functional import grid_sample
 import tornado
@@ -49,7 +49,7 @@ Y_=np.arange(0, 1000, 1)
 # W=J[:,:,:]
 xI = [Y_,X_]
 # J = W[None]/np.mean(np.abs(W))
-vol,hdr = nrrd.read('../E13-5_MRI_34um/atlasVolume.nrrd',index_order='F')
+#vol,hdr = nrrd.read('../E13-5_MRI_34um/atlasVolume.nrrd',index_order='F')
 import SimpleITK as sitk
 itkimage = sitk.ReadImage("../atlasVolume/atlasVolume.mhd")
 ct_scan = sitk.GetArrayFromImage(itkimage)
@@ -79,7 +79,7 @@ ax.set_title('Atlas Slice')
 #for i in range(len(xJ)):
 #    xJ[i]=xJ[i]*100
 J = (A[slice][None] / np.mean(np.abs(A[slice]),keepdims=True)).astype(np.float64)
-J=J[:,280:,:]
+J=J[:,:250,:]
 # I = np.concatenate((I,(I-np.mean(I))**2))
  
 YJ = (np.array(range(J.shape[1]))*1.).astype(np.float64) # needs to be longs not doubles for STalign.transform later so multiply by 1.
@@ -110,7 +110,7 @@ for i in pointsIlist.keys():
         pointsI.append([pointsIlist[i][j][1], pointsIlist[i][j][0]])
 for i in pointsJlist.keys():
     for j in range(len(pointsJlist[i])):
-        pointsJ.append([pointsJlist[i][j][1]-280, pointsJlist[i][j][0]])
+        pointsJ.append([pointsJlist[i][j][1], pointsJlist[i][j][0]])
 I=I
 J = np.vstack((J,J,J)) 
 pointsI = np.array(pointsI)
@@ -136,7 +136,7 @@ for i in pointsIlist.keys():
         ax[0].text(pointsIlist[i][j][0], pointsIlist[i][j][1],f'{i}{j}', c='red', transform=trans_offset_0, fontsize= 8)
 for i in pointsJlist.keys():
     for j in range(len(pointsJlist[i])):
-        ax[1].text(pointsJlist[i][j][0], pointsJlist[i][j][1]-280,f'{i}{j}', c='red', transform=trans_offset_1, fontsize= 8)
+        ax[1].text(pointsJlist[i][j][0], pointsJlist[i][j][1],f'{i}{j}', c='red', transform=trans_offset_1, fontsize= 8)
         
 ax[0].set_title('source with pointsI', fontsize=15)
 ax[1].set_title('target with pointsJ', fontsize=15)
@@ -150,15 +150,13 @@ else:
     torch.set_default_device('cpu')
 L,T = STalign.L_T_from_points(pointsI,pointsJ)
 
-sigmaA = 0.18 #standard deviation of artifact intensities
-sigmaB = 0.18 #standard deviation of background intensities
-sigmaM = 0.18#standard deviation of matching tissue intenities
+sigmaA = 0.12 #standard deviation of artifact intensities
+sigmaB = 0.12 #standard deviation of background intensities
+sigmaM = 0.12#standard deviation of matching tissue intenities
 # muA = torch.tensor([3,3,3],device='cpu') #average of artifact intensities
 # muB = torch.tensor([0,0,0],device='cpu') #average of background intensities
 # initialize variables
-scale_x = 0.02 #default = 0.9
-scale_y = 0.02 #default = 0.9A
-scale_z = 0.02 #default = 0.9
+
 theta0 = (np.pi/180)*theta_deg
 
 
@@ -166,46 +164,6 @@ extentJ = STalign.extent_from_x((YJ,XJ))
 extentI = STalign.extent_from_x((YI,XI))
 
 
-# fig,ax = plt.subplots(1,2)
-# ax[0].imshow((I.transpose(1,2,0).squeeze()), extent=extentI) 
-# ax[1].imshow((J.transpose(1,2,0).squeeze()), extent=extentJ)
-
-# trans_offset_0 = mtransforms.offset_copy(ax[0].transData, fig=fig,
-#                                        x=0.05, y=-0.05, units='inches')
-# trans_offset_1 = mtransforms.offset_copy(ax[1].transData, fig=fig,
-#                                        x=0.05, y=-0.05, units='inches')
-
-# ax[0].scatter(pointsI[:,1],pointsI[:,0], c='red', s=10)
-# ax[1].scatter(pointsJ[:,1],pointsJ[:,0], c='red', s=10)
-    
-# for i in pointsIlist.keys():
-#     for j in range(len(pointsIlist[i])):
-#         ax[0].text(pointsIlist[i][j][0], pointsIlist[i][j][1],f'{i}{j}', c='red', transform=trans_offset_0, fontsize= 8)
-# for i in pointsJlist.keys():
-#     for j in range(len(pointsJlist[i])):
-#         ax[1].text(pointsJlist[i][j][0], pointsJlist[i][j][1],f'{i}{j}', c='red', transform=trans_offset_1, fontsize= 8)
-        
-# ax[0].set_title('source with pointsI', fontsize=15)
-# ax[1].set_title('target with pointsJ', fontsize=15)
-
-# # invert only rasterized image
-# ax[0].invert_yaxis()
-# get an initial guess
-# if "Ti" in locals() :
-#     T = np.array([-xI[0][slice],np.mean(xJ[0])-(Ti[0]*scale_y),np.mean(xJ[1])-(Ti[1]*scale_x)])
-# else:
-#     T = np.array([-xI[0][slice],np.mean(xJ[0]),np.mean(xJ[1])])
-
-# scale_atlas = np.array([[scale_z,0,0],
-#                         [0,scale_x,0],
-#                         [0,0,scale_y]])
-# L = np.array([[1.0,0.0,0.0],
-#               [0.0,np.cos(theta0),-np.sin(theta0)],
-#               [0.0,np.sin(theta0),np.cos(theta0)]])
-# L = np.matmul(L,scale_atlas)#np.identity(3)
-
-
-# run LDDMM
 # specify device (default device for STalign.LDDMM is cpu)
 if torch.cuda.is_available():
     device = 'cuda:0'
@@ -218,29 +176,45 @@ else:
 # %%
 xI=[YI,XI]
 xJ=[YJ,XJ]
-transform = STalign.LDDMM(
-    xI,I,xJ,J,
-    L=L,T=T,
-    pointsI= pointsI,
-    pointsJ=pointsJ,
-    #nt=4,
-    niter=500,
-    diffeo_start = 1,
-    device='cpu',
-    # a=10,
-    sigmaP = 2e-1,
-    epL= 5e-11,
-    epT= 5e-4,
-    epV= 5e-2,
-    sigmaA = sigmaA, #standard deviation of artifact intensities
-    sigmaB = sigmaB, #standard deviation of background intensities
-    sigmaM = sigmaM, #standard deviation of matching tissue intenities
-    # muA = muA, #average of artifact intensities
-    # muB = muB #average of background intensities
-)
+err=100000
+for i in range(1,10,1):
+    for j in range(1,100,10):
+        torch.cuda.empty_cache()
+        print(str(i)+"-"+str(j))
+        transform = STalign.LDDMM(
+        xI,I,xJ,J,
+        L=L,T=T,
+        pointsI= pointsI,
+        pointsJ=pointsJ,
+        nt=i,
+        niter=300,
+        diffeo_start = 16,
+        device='cuda:0',
+        a=j,
+        sigmaP = 2e-1,
+        epL= 5e-11,
+        epT= 5e-3,
+        epV= 5e-2,
+        sigmaA = sigmaA, #standard deviation of artifact intensities
+        sigmaB = sigmaB, #standard deviation of background intensities
+        sigmaM = sigmaM, #standard deviation of matching tissue intenities
+        # muA = muA, #average of artifact intensities
+        # muB = muB #average of background intensities
+        )
+        A = transform['A']
+        v = transform['v']
+        xv = transform['xv']
+        phiI = STalign.transform_image_source_to_target(xv,v,A,[YI,XI],I,[YJ,XJ])
+        if phiI.is_cuda:
+            phiI = phiI.cpu()
+        mse =((J - phiI.numpy())**2).mean(axis=None)
+        print(mse)
+        if mse <err:
+            err=mse
+            param=[i,j]
+        
 # %%
-
-
+aaa=torch.cuda.memory_summary(device=None, abbreviated=False)
 
 
 
@@ -250,7 +224,10 @@ A = transform['A']
 v = transform['v']
 xv = transform['xv']
 #Xs = transform['Xs']
-WM = transform['WM']
+
+WM = transform['WM'].tolist()
+WB = transform['WB'].tolist()
+WA = transform['WA'].tolist()
 phii = STalign.build_transform(xv,v,A,XJ=[YJ,XJ],direction='b')
 phiI = STalign.transform_image_source_to_target(xv,v,A,[YI,XI],I,[YJ,XJ])
 phiipointsI = STalign.transform_points_source_to_target(xv,v,A,pointsI)
@@ -275,6 +252,10 @@ ax.set_title('source to target')
 
 ax.imshow(phiI.permute(1,2,0)/torch.max(phiI),extent=extentJ)
 ax.scatter(phiipointsI[:,1].detach(),phiipointsI[:,0].detach(),s=4,c="m")
+
+mse = ((pointsJ - phiipointsI.numpy())**2).mean(axis=None)
+mse =((J - phiI.numpy())**2).mean(axis=None)
+
 #%%
 import matplotlib as mpl
 It = torch.tensor(I,device='cpu',dtype=torch.float64)
@@ -287,10 +268,10 @@ Ishow_target = Jt.permute(1,2,0).cpu()/torch.max(Jt).item()
 fig,ax = plt.subplots(1,3, figsize=(15,5))
 ax0 = ax[0].imshow(Ishow_target.squeeze(), extent=extentI, cmap = mpl.cm.Blues,alpha=0.9)
 ax[0].set_title('MERFISH Slice')
-ax1 = ax[1].imshow(AI.permute(1,2,0).squeeze(), extent=extentI, cmap = mpl.cm.Reds,alpha=0.2)
+ax1 = ax[1].imshow(AI.permute(1,2,0).cpu().squeeze(), extent=extentI, cmap = mpl.cm.Reds,alpha=0.2)
 ax[1].set_title('z=0 slice of Aligned 3D Allen Brain Atlas')
 ax2 = ax[2].imshow(Ishow_target.squeeze(), extent=extentI, cmap = mpl.cm.Blues,alpha=0.9)
-ax2 = ax[2].imshow(AI.permute(1,2,0).squeeze(), extent=extentI, cmap = mpl.cm.Reds,alpha=0.3)
+ax2 = ax[2].imshow(AI.permute(1,2,0).cpu().squeeze(), extent=extentI, cmap = mpl.cm.Reds,alpha=0.3)
 ax[2].set_title('Overlayed')
 
 plt.show()
@@ -300,7 +281,7 @@ fig,ax = plt.subplots()
 
 ax.imshow((J).transpose(1,2,0),extent=extentJ,alpha=1)
 
-ax.imshow(phiI.permute(1,2,0)/torch.max(phiI),extent=extentJ, cmap = mpl.cm.Reds,alpha =0.4)
+ax.imshow(phiI.permute(1,2,0)/torch.max(phiI),extent=extentJ, cmap = mpl.cm.Reds,alpha =1)
 ax.scatter(phiipointsI[:,1].detach(),phiipointsI[:,0].detach(),c="blue", label='source landmarks aligned', s=4)
 
 ax.scatter(pointsJ[:,1],pointsJ[:,0], c='red', label='target landmarks', s=4)
@@ -313,19 +294,20 @@ for handle in lgnd.legend_handles:
 ax.set_title('After alignment aligned source and target with aligned pointsI and pointsJ')
 
 #%%
-fname = '../visium_data/tissue_positions_test.csv'
+#I=I[0:200,1500:4200,400:3000]
+fname = '../visium_data/sccanals26/A1_tissue_positions.csv'
 df1 = pd.read_csv(fname)
 df1=df1[df1["in_tissue"]==1]
 df1=df1[df1["pxl_col_in_fullres"]>400]
 df1=df1[df1["pxl_col_in_fullres"]<3000]
-df1=df1[df1["pxl_row_in_fullres"]>2300]
-df1=df1[df1["pxl_row_in_fullres"]<4500]
+df1=df1[df1["pxl_row_in_fullres"]>1500]
+df1=df1[df1["pxl_row_in_fullres"]<4200]
 
 # get cell centroid coordinates
 xI = (np.array(df1['pxl_col_in_fullres']-400)).astype(np.float64)
-yI = (np.array(df1['pxl_row_in_fullres']-2300)).astype(np.float64)
+yI = (np.array(df1['pxl_row_in_fullres']-1500)).astype(np.float64)
 test = Vnorm.transpose(2,0,1)
-test=test[0:200,2300:4500,400:3000]
+test=test[0:200,1500:4200,400:3000]
 # plot
 fig,ax = plt.subplots()
 ax.imshow(test.transpose(1,2,0))
