@@ -24,3 +24,5 @@ docs/merfish_data/mouse_brain_map_BrainReceptorShowcase_Slice2_Replicate3_STalig
 *.xml
 *.zip
 docs/atlasVolume/estriat-Segment_15861-label.zraw
+*.csv#
+docs/notebooks/Y_only_5_celltypes.xlsx
