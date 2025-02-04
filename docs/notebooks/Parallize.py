@@ -40,4 +40,4 @@ end = time.time()
 # Print the execution time
 print("The time of execution of above program is :", (end - start), "s")
 image = sitk.GetImageFromArray(zero_array)
-sitk.WriteImage(image, "hard_pred.mhd")
+sitk.WriteImage(image, "visualizations/hard_pred1.mhd")
