@@ -995,6 +995,9 @@ def LDDMM(xI,I,xJ,J,pointsI=None,pointsJ=None,
         If the target is a grayscale image, this should be a tensor of size 1.
     muB: torch tensor whose dimension is the same as the target image
         Defaults to None, which means we estimate this. If you provide a value, we will not estimate it.
+    display: binary
+        Defaults to True
+        Decides if the plots of the function will be shown
         
     Returns a dictionary
     -------
@@ -1011,6 +1014,8 @@ def LDDMM(xI,I,xJ,J,pointsI=None,pointsJ=None,
         Resulting weight 2D array (background)
     'WA': torch tensor
         Resulting weight 2D array (artifact)
+    'Errors': list
+        List of the progresion of the errors in algingment
     }
     
     '''
@@ -1399,11 +1404,10 @@ def LDDMM_3D_to_slice(xI,I,xJ,J,pointsI=None,pointsJ=None,
     #ax.imshow(K[0].cpu())
     DV = torch.prod(dv)
     Ki = torch.fft.ifftn(K).real
-    if display:
-        fig,ax = plt.subplots()
-        ax.imshow(Ki[Ki.shape[0]//2].clone().detach().cpu().numpy(),vmin=0.0,extent=extentV)
-        ax.set_title('smoothing kernel')
-        fig.canvas.draw()
+    fig,ax = plt.subplots()
+    ax.imshow(Ki[Ki.shape[0]//2].clone().detach().cpu().numpy(),vmin=0.0,extent=extentV)
+    ax.set_title('smoothing kernel')
+    fig.canvas.draw()
 
     # steps
     epL = torch.tensor(epL,device=device,dtype=dtype)
@@ -1447,11 +1451,10 @@ def LDDMM_3D_to_slice(xI,I,xJ,J,pointsI=None,pointsJ=None,
     '''
 
     # a figure
-    if display:
-        fig,ax = plt.subplots(2,3)
-        ax = ax.ravel()
-        figE,axE = plt.subplots(1,3)
-        axE = axE.ravel()
+    fig,ax = plt.subplots(2,3)
+    ax = ax.ravel()
+    figE,axE = plt.subplots(1,3)
+    axE = axE.ravel()
     Esave = []
     # zero gradients
     try:
